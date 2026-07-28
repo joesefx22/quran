@@ -1,0 +1,59 @@
+name: quran_halaqa
+description: تطبيق متابعة حلقات القرآن الكريم - نظام النقاط.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # csv: ^8.0.0  # غير مستخدم حالياً
+
+  # UI
+  cupertino_icons: ^1.0.6
+  google_fonts: ^8.2.0
+  flutter_svg: ^2.0.9
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Supabase (Backend)
+  supabase_flutter: ^2.3.0
+
+  # Local Database (Offline + Web) - مجمدة مؤقتاً
+  # isar: ^3.1.0+1
+  # isar_flutter_libs: ^3.1.0+1
+  path_provider: ^2.1.2
+
+  # SQLite للقرآن
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
+  # Connectivity
+  connectivity_plus: ^7.3.1
+
+  # Helpers
+  intl: ^0.20.2
+  uuid: ^4.2.1
+  # freezed_annotation: ^2.4.4
+  # json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  # build_runner: ^2.4.13
+  # isar_generator: ^3.1.0+1
+  # riverpod_generator: ^2.4.0
+  # freezed: ^2.5.2
+  # json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/quran.db

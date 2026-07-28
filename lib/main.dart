@@ -1,0 +1,35 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'services/supabase_config.dart';
+import 'core/theme.dart';
+import 'core/router.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseConfig.init();
+  // TODO: Isar frozen – await IsarService.isar;
+  runApp(const ProviderScope(child: QuranHalaqaApp()));
+}
+
+class QuranHalaqaApp extends StatelessWidget {
+  const QuranHalaqaApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'حلقة القرآن',
+      theme: AppTheme.lightTheme,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ar', 'SA')],
+      locale: const Locale('ar', 'SA'),
+      initialRoute: AppRouter.splash,
+      onGenerateRoute: AppRouter.generateRoute,
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
