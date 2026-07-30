@@ -1,21 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_config.dart';
 import '../core/strings.dart';
-
-final teacherRegistrationEnabledProvider = FutureProvider<bool>((ref) async {
-  try {
-    final res = await SupabaseConfig.client
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'teacher_registration_open')
-        .maybeSingle();
-    return res != null && res['value'] == 'true';
-  } catch (_) {
-    return false;
-  }
-});
+import '../core/theme.dart';
+import 'complete_profile_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -25,6 +15,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
@@ -40,6 +31,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
       final res = await SupabaseConfig.client.auth.signUp(
@@ -54,23 +46,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             'email': _emailController.text.trim(),
             'full_name': _nameController.text.trim(),
             'role': _role,
+            'profile_completed': false,
           });
           if (!mounted) return;
-          Navigator.pushReplacementNamed(context, '/login');
-        } catch (_) {
-          await SupabaseConfig.client.auth.signOut();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('فشل إكمال التسجيل. حاول مرة أخرى.')),
+          HapticFeedback.mediumImpact();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CompleteProfileScreen(
+                userId: res.user!.id,
+                email: _emailController.text.trim(),
+                fullName: _nameController.text.trim(),
+                role: _role,
+              ),
+            ),
           );
+        } catch (e) {
+          await SupabaseConfig.client.auth.signOut();
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('فشل إكمال التسجيل. حاول مرة أخرى.')));
         }
       }
     } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -78,56 +77,94 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final teacherEnabled = ref.watch(teacherRegistrationEnabledProvider);
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.register)),
+      backgroundColor: isDark ? const Color(0xFF000000) : AppTheme.ivory,
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
             child: Column(
               children: [
+                const SizedBox(height: 20),
+                Icon(Icons.person_add_alt_rounded, size: 64, color: AppTheme.emeraldGreen)
+                    .animate().scale(duration: 500.ms),
+                const SizedBox(height: 12),
+                Text(
+                  AppStrings.register,
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ).animate().fadeIn(),
+                const SizedBox(height: 32),
                 TextFormField(
-                  controller: _nameController, 
-                  decoration: const InputDecoration(labelText: 'الاسم الكامل')
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController, 
-                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController, 
-                  decoration: const InputDecoration(labelText: 'كلمة المرور'),
-                  obscureText: true,
-                ),
-                const SizedBox(height: 16),
-                teacherEnabled.when(
-                  data: (enabled) => DropdownButtonFormField<String>(
-                    value: _role,
-                    decoration: const InputDecoration(labelText: 'الدور'),
-                    items: [
-                      const DropdownMenuItem(value: 'student', child: Text('طالب')),
-                      const DropdownMenuItem(value: 'guardian', child: Text('ولي أمر')),
-                      if (enabled) const DropdownMenuItem(value: 'teacher', child: Text('معلم')),
-                    ],
-                    onChanged: (v) => _role = v!,
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'الاسم الكامل',
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox(),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _register,
-                  child: _loading ? const CircularProgressIndicator() : const Text(AppStrings.register),
-                ),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                ).animate().fadeIn(delay: 200.ms),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'البريد الإلكتروني',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'البريد مطلوب';
+                    if (!v.contains('@') || !v.contains('.')) return 'بريد غير صالح';
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 300.ms),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'كلمة المرور',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  obscureText: true,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'كلمة المرور مطلوبة';
+                    if (v.length < 6) return '6 أحرف على الأقل';
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 400.ms),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _role,
+                  decoration: const InputDecoration(
+                    labelText: 'الدور',
+                    prefixIcon: Icon(Icons.school_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'student', child: Text('طالب')),
+                    DropdownMenuItem(value: 'guardian', child: Text('ولي أمر')),
+                  ],
+                  onChanged: (v) => setState(() => _role = v!),
+                ).animate().fadeIn(delay: 500.ms),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _register,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: _loading
+                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('إنشاء حساب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  ),
+                ).animate().fadeIn(delay: 600.ms),
+                const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                  child: const Text('لدي حساب بالفعل؟ سجل دخولك'),
+                  child: Text('لدي حساب بالفعل', style: TextStyle(color: AppTheme.warmGold)),
                 ),
               ],
             ),

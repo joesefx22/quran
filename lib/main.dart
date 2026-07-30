@@ -8,7 +8,6 @@ import 'core/router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseConfig.init();
-  // TODO: Isar frozen – await IsarService.isar;
   runApp(const ProviderScope(child: QuranHalaqaApp()));
 }
 

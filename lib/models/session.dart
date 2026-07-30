@@ -1,28 +1,31 @@
-// import 'package:isar/isar.dart';
-// part 'session.g.dart';
-
-// @collection
 class Session {
-  // Id id = Isar.autoIncrement;
   int id = 0;
-
-  // @Index(unique: true, replace: true)
   String? supabaseId;
-
-  // @Index()
   late String studentSupabaseId;
-
-  late String groupSupabaseId;
   late String teacherSupabaseId;
+  late String groupSupabaseId;
   late DateTime sessionDate;
+
+  bool attended = true;
   bool earlyAttendance = false;
-  bool onTimeDeparture = false;
   bool earlyRecitation = false;
+  bool onTimeDeparture = false;
   bool cumulativeDone = false;
-  double totalPoints = 0.0;
+  bool skippedNew = false;
+  bool skippedReview = false;
 
-  // @Index()
+  double newPages = 0;
+  double reviewPages = 0;
+  double cumulativePages = 0;
+
+  double newPoints = 0;
+  double reviewPoints = 0;
+  double cumulativePoints = 0;
+  double extraNewPoints = 0;
+  double extraReviewPoints = 0;
+  double attendancePoints = 0;
+  double totalPoints = 0;
+
   bool isSynced = false;
-
   DateTime? createdAt;
 }

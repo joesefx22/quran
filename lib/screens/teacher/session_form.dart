@@ -1,224 +1,322 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/user.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../models/local_user.dart';
+import '../../models/session_part.dart';
+import '../../models/session_submission.dart';
 import '../../providers/teacher_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../widgets/session_part_form.dart';
-import '../../core/strings.dart';
 import '../../services/quran_database_service.dart';
+import '../../widgets/searchable_dropdown.dart';
+import '../../widgets/session_points_dialog.dart';
+import '../../widgets/islamic_header.dart';
+import '../../core/theme.dart';
 
 final surahsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final db = QuranDatabaseService();
   return db.getSurahs();
 });
 
-final cumulativeSuggestionProvider = FutureProvider.family<String, String>((ref, studentId) {
-  return ref.read(teacherProvider).getCumulativeSuggestion(studentId);
-});
-
 class SessionForm extends ConsumerStatefulWidget {
-  final User student;
-  const SessionForm({super.key, required this.student});
+  final LocalUser student;
+  final String teacherId;
+  final String groupId;
+  const SessionForm({super.key, required this.student, required this.teacherId, required this.groupId});
 
   @override
   ConsumerState<SessionForm> createState() => _SessionFormState();
 }
 
 class _SessionFormState extends ConsumerState<SessionForm> {
-  late final _newParts = <SessionPartWidgetController>[];
-  final _reviewParts = <SessionPartWidgetController>[];
-  bool _cumulativeDone = false;
+  bool _attended = true;
   bool _earlyAttendance = false;
-  bool _onTimeDeparture = false;
   bool _earlyRecitation = false;
+  bool _onTimeDeparture = false;
+  bool _skippedNew = false;
+  bool _skippedReview = false;
+  bool _cumulativeDone = false;
+
+  final List<_PartEntry> _newParts = [];
+  final List<_PartEntry> _reviewParts = [];
 
   @override
   void initState() {
     super.initState();
-    _newParts.add(SessionPartWidgetController());
+    _newParts.add(_PartEntry());
   }
 
-  @override
-  void dispose() {
-    for (var c in _newParts) c.dispose();
-    for (var c in _reviewParts) c.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final teacher = ref.read(authProvider).currentSession?.user;
-    if (teacher == null) return;
-
-    final partsData = <Map<String, dynamic>>[];
-    for (var c in _newParts) {
-      final data = c.getData();
-      if (data != null) {
-        partsData.add({
-          'type': data.isExtra ? 'extra_new' : 'new',
-          'suraStart': data.suraStart,
-          'ayaStart': data.ayaStart,
-          'suraEnd': data.suraEnd,
-          'ayaEnd': data.ayaEnd,
-          'isExtra': data.isExtra,
-          'evaluation': data.evaluation,
-          'notes': data.notes,
-        });
-      }
-    }
-    for (var c in _reviewParts) {
-      final data = c.getData();
-      if (data != null) {
-        partsData.add({
-          'type': data.isExtra ? 'extra_review' : 'review',
-          'suraStart': data.suraStart,
-          'ayaStart': data.ayaStart,
-          'suraEnd': data.suraEnd,
-          'ayaEnd': data.ayaEnd,
-          'isExtra': data.isExtra,
-          'evaluation': data.evaluation,
-          'notes': data.notes,
-        });
-      }
-    }
-
-    if (partsData.isEmpty && !_earlyAttendance && !_earlyRecitation && !_onTimeDeparture && !_cumulativeDone) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال بيانات التسميع أو الحضور.')));
-      return;
-    }
-
-    await ref.read(teacherProvider).submitFullSession(
-      studentSupabaseId: widget.student.supabaseId,
-      groupSupabaseId: widget.student.groupSupabaseId ?? '',
-      teacherSupabaseId: teacher.id,
-      sessionDate: DateTime.now(),
-      partsData: partsData,
-      earlyAttendance: _earlyAttendance,
-      onTimeDeparture: _onTimeDeparture,
-      earlyRecitation: _earlyRecitation,
-      cumulativeDone: _cumulativeDone,
-    );
-
-    if (mounted) Navigator.pop(context);
+  Widget _buildPartCard(_PartEntry part, List<Map<String, dynamic>> surahs, {required bool isNew}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+      elevation: 1.5,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emeraldGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isNew ? Icons.auto_stories_rounded : Icons.history_rounded,
+                    color: AppTheme.emeraldGreen,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isNew ? 'حفظ جديد' : 'مراجعة',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                if ((isNew ? _newParts.length : _reviewParts.length) > 1)
+                  IconButton(
+                    onPressed: () => setState(() => (isNew ? _newParts : _reviewParts).remove(part)),
+                    icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 22),
+                    splashRadius: 20,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: SearchableDropdown<Map<String, dynamic>>(
+                    items: surahs,
+                    labelBuilder: (s) => '${s['sora_name_ar']} (${s['sora']})',
+                    hint: 'من سورة',
+                    onChanged: (val) => part.suraStart = val?['sora'] as int? ?? 0,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    decoration: const InputDecoration(hintText: 'آية', prefixIcon: Icon(Icons.format_list_numbered_rtl, size: 20)),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => part.ayaStart = int.tryParse(v) ?? 0,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: SearchableDropdown<Map<String, dynamic>>(
+                    items: surahs,
+                    labelBuilder: (s) => '${s['sora_name_ar']} (${s['sora']})',
+                    hint: 'إلى سورة',
+                    onChanged: (val) => part.suraEnd = val?['sora'] as int? ?? 0,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    decoration: const InputDecoration(hintText: 'آية', prefixIcon: Icon(Icons.format_list_numbered_rtl, size: 20)),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => part.ayaEnd = int.tryParse(v) ?? 0,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'ممتاز', label: Text('ممتاز', style: TextStyle(fontSize: 12))),
+                ButtonSegment(value: 'جيد جداً', label: Text('جيد جداً', style: TextStyle(fontSize: 12))),
+                ButtonSegment(value: 'جيد', label: Text('جيد', style: TextStyle(fontSize: 12))),
+                ButtonSegment(value: 'مقبول', label: Text('مقبول', style: TextStyle(fontSize: 12))),
+                ButtonSegment(value: 'ضعيف', label: Text('ضعيف', style: TextStyle(fontSize: 12))),
+              ],
+              selected: {part.evaluation ?? 'ممتاز'},
+              onSelectionChanged: (newSelection) {
+                setState(() => part.evaluation = newSelection.first);
+              },
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) return AppTheme.emeraldGreen;
+                  return isDark ? Colors.grey[800] : Colors.grey[100];
+                }),
+                foregroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) return Colors.white;
+                  return isDark ? Colors.white70 : AppTheme.darkSlate;
+                }),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'ملاحظات',
+                hintText: 'أي ملاحظات حول هذا التسميع...',
+                prefixIcon: Icon(Icons.notes_rounded),
+              ),
+              minLines: 1,
+              maxLines: 3,
+              onChanged: (v) {}, // ملاحظات غير مطلوبة حالياً، لكن موجودة
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.1, end: 0);
   }
 
   @override
   Widget build(BuildContext context) {
     final surahsAsync = ref.watch(surahsProvider);
-    final suggestionAsync = ref.watch(cumulativeSuggestionProvider(widget.student.supabaseId));
-
     return Scaffold(
-      appBar: AppBar(title: Text('جلسة ${widget.student.fullName}')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: SingleChildScrollView(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 140,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text('تقرير ${widget.student.fullName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              background: IslamicHeader(title: 'تقرير الحفظ', subtitle: widget.student.fullName).animate().fadeIn(),
+            ),
+          ),
+          SliverPadding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // مربع التراكمي المقترح
-                suggestionAsync.when(
-                  data: (sug) => Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12.0),
-                    margin: const EdgeInsets.only(bottom: 8.0),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.teal.shade200),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildCheckboxTile('حضر الحلقة', _attended, (v) => setState(() => _attended = v!)),
+                _buildCheckboxTile('حضور مبكر', _earlyAttendance, (v) => setState(() => _earlyAttendance = v!)),
+                _buildCheckboxTile('تسميع مبكر', _earlyRecitation, (v) => setState(() => _earlyRecitation = v!)),
+                _buildCheckboxTile('انصراف في الوقت', _onTimeDeparture, (v) => setState(() => _onTimeDeparture = v!)),
+                const Divider(color: AppTheme.warmGold),
+                _buildCheckboxTile('لم يسمع الجديد', _skippedNew, (v) => setState(() => _skippedNew = v!)),
+                _buildCheckboxTile('لم يسمع المراجعة', _skippedReview, (v) => setState(() => _skippedReview = v!)),
+                _buildCheckboxTile('سمع التراكمي', _cumulativeDone, (v) => setState(() => _cumulativeDone = v!)),
+                const Divider(color: AppTheme.warmGold),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('الجديد', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add, color: AppTheme.emeraldGreen),
+                      label: const Text('إضافة جزء جديد'),
+                      onPressed: () => setState(() => _newParts.add(_PartEntry())),
                     ),
-                    child: Text('📌 التراكمي المقترح:\n$sug', style: TextStyle(color: Colors.teal.shade900)),
-                  ),
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
+                  ],
                 ),
-                CheckboxListTile(
-                  title: const Text(AppStrings.doneCumulative),
-                  value: _cumulativeDone,
-                  onChanged: (v) => setState(() => _cumulativeDone = v ?? false),
-                ),
-                const SizedBox(height: 16),
-                const Text(AppStrings.newMemorization,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 surahsAsync.when(
-                  data: (surahs) => Column(
-                    children: _newParts.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final c = entry.value;
-                      return SessionPartWidget(
-                        controller: c,
-                        isExtra: false,
-                        surahs: surahs,
-                        onDelete: _newParts.length > 1
-                            ? () => setState(() {
-                                  c.dispose();
-                                  _newParts.removeAt(index);
-                                })
-                            : null,
-                      );
-                    }).toList(),
-                  ),
+                  data: (surahs) => Column(children: _newParts.map((p) => _buildPartCard(p, surahs, isNew: true)).toList()),
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text('خطأ في تحميل السور: $e'),
+                  error: (e, _) => Text('خطأ: $e'),
                 ),
-                TextButton.icon(
-                  onPressed: () => setState(() => _newParts.add(SessionPartWidgetController())),
-                  icon: const Icon(Icons.add),
-                  label: const Text('إضافة تسميع منفصل'),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('المراجعة', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add, color: AppTheme.emeraldGreen),
+                      label: const Text('إضافة جزء مراجعة'),
+                      onPressed: () => setState(() => _reviewParts.add(_PartEntry())),
+                    ),
+                  ],
                 ),
-                const Divider(),
-                const Text(AppStrings.review,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 surahsAsync.when(
-                  data: (surahs) => Column(
-                    children: _reviewParts.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final c = entry.value;
-                      return SessionPartWidget(
-                        controller: c,
-                        isExtra: false,
-                        surahs: surahs,
-                        onDelete: () => setState(() {
-                          c.dispose();
-                          _reviewParts.removeAt(index);
-                        }),
-                      );
-                    }).toList(),
-                  ),
+                  data: (surahs) => Column(children: _reviewParts.map((p) => _buildPartCard(p, surahs, isNew: false)).toList()),
                   loading: () => const SizedBox(),
                   error: (e, _) => const SizedBox(),
                 ),
-                TextButton.icon(
-                  onPressed: () => setState(() => _reviewParts.add(SessionPartWidgetController())),
-                  icon: const Icon(Icons.add),
-                  label: const Text('إضافة مراجعة منفصلة'),
-                ),
-                const Divider(),
-                CheckboxListTile(
-                    title: const Text(AppStrings.earlyAttendance),
-                    value: _earlyAttendance,
-                    onChanged: (v) => setState(() => _earlyAttendance = v ?? false)),
-                CheckboxListTile(
-                    title: const Text(AppStrings.onTimeDeparture),
-                    value: _onTimeDeparture,
-                    onChanged: (v) => setState(() => _onTimeDeparture = v ?? false)),
-                CheckboxListTile(
-                    title: const Text(AppStrings.earlyRecitation),
-                    value: _earlyRecitation,
-                    onChanged: (v) => setState(() => _earlyRecitation = v ?? false)),
-                const SizedBox(height: 20),
-                Center(
-                  child: ElevatedButton(
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
                     onPressed: _submit,
-                    child: const Text('حفظ الجلسة'),
+                    icon: const Icon(Icons.save_rounded, color: Colors.white),
+                    label: const Text('حفظ التقرير', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 4,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 40),
-              ],
+                ).animate().fadeIn(delay: 200.ms).shimmer(duration: 1000.ms, color: AppTheme.warmGold.withOpacity(0.3)),
+              ]),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
+
+  Widget _buildCheckboxTile(String title, bool value, ValueChanged<bool?> onChanged) {
+    return CheckboxListTile(
+      title: Text(title, style: Theme.of(context).textTheme.bodyLarge),
+      value: value,
+      onChanged: onChanged,
+      activeColor: AppTheme.emeraldGreen,
+      checkColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+    );
+  }
+
+  Future<void> _submit() async {
+    final parts = <SessionPartSubmission>[];
+    parts.addAll(_newParts.where((p) => p.isValid).map((p) => SessionPartSubmission(
+      type: SessionType.memorization,
+      suraStart: p.suraStart,
+      ayaStart: p.ayaStart,
+      suraEnd: p.suraEnd,
+      ayaEnd: p.ayaEnd,
+      evaluation: p.evaluation,
+    )));
+    parts.addAll(_reviewParts.where((p) => p.isValid).map((p) => SessionPartSubmission(
+      type: SessionType.review,
+      suraStart: p.suraStart,
+      ayaStart: p.ayaStart,
+      suraEnd: p.suraEnd,
+      ayaEnd: p.ayaEnd,
+      evaluation: p.evaluation,
+    )));
+
+    final submission = SessionSubmission(
+      studentSupabaseId: widget.student.supabaseId,
+      groupSupabaseId: widget.groupId,
+      teacherSupabaseId: widget.teacherId,
+      sessionDate: DateTime.now(),
+      attended: _attended,
+      earlyAttendance: _earlyAttendance,
+      earlyRecitation: _earlyRecitation,
+      onTimeDeparture: _onTimeDeparture,
+      cumulativeDone: _cumulativeDone,
+      skippedNew: _skippedNew,
+      skippedReview: _skippedReview,
+      parts: parts,
+    );
+
+    try {
+      final result = await ref.read(teacherProvider).submitFullSession(submission);
+      HapticFeedback.mediumImpact();
+      if (!mounted) return;
+      await showDialog(context: context, builder: (_) => SessionPointsDialog(result: result));
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+    }
+  }
+}
+
+class _PartEntry {
+  int suraStart = 0;
+  int ayaStart = 0;
+  int suraEnd = 0;
+  int ayaEnd = 0;
+  String? evaluation = 'ممتاز';
+
+  bool get isValid => suraStart > 0 && ayaStart > 0 && suraEnd > 0 && ayaEnd > 0;
 }

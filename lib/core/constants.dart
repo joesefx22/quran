@@ -17,13 +17,4 @@ class AppConstants {
     DateTime.tuesday,
     DateTime.wednesday
   ];
-
-  static const double baseAttendancePoints = 2.0;
-  static const double earlyAttendanceBonus = 2.0;
-  static const double onTimeDepartureBonus = 2.0;
-  static const double earlyRecitationBonus = 2.0;
-  static const double completionNewPoints = 4.0;
-  static const double extraNewPointsPer5 = 6.0;
-  static const double completionCumulativeReviewPoints = 6.0;
-  static const double extraReviewPointsPer50 = 8.0;
 }

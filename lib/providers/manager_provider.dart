@@ -32,7 +32,15 @@ class ManagerController {
   }
 
   Future<String> exportStudentsData() async {
-    // TODO: Isar frozen – إرجاع CSV وهمي
-    return 'الاسم,البريد,المجموعة,إجمالي نقاط التسميع\nطالب تجريبي,test@test.com,mock_group,10.0\n';
+    try {
+      final students = await SupabaseConfig.client.from('users').select('full_name, email').eq('role', 'student');
+      String csv = 'الاسم,البريد الإلكتروني\n';
+      for (final s in students) {
+        csv += '${s['full_name']},${s['email']}\n';
+      }
+      return csv;
+    } catch (e) {
+      return 'خطأ في التصدير';
+    }
   }
 }

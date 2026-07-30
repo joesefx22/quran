@@ -9,13 +9,11 @@ class AppStrings {
   static const String error = 'حدث خطأ';
   static const String save = 'حفظ';
   static const String cancel = 'إلغاء';
-
   static const String roleManager = 'مدير';
   static const String roleTeacher = 'معلم';
   static const String roleAssistant = 'مساعد معلم';
   static const String roleStudent = 'طالب';
   static const String roleGuardian = 'ولي أمر';
-
   static const String todaySession = 'حلقة اليوم';
   static const String addSession = 'إضافة جلسة';
   static const String newMemorization = 'الحفظ الجديد';
@@ -27,13 +25,11 @@ class AppStrings {
   static const String evaluation = 'التقييم';
   static const String notes = 'ملاحظات';
   static const String studentCard = 'بطاقة الطالب';
-
   static const String excellent = 'ممتاز';
   static const String veryGood = 'جيد جداً';
   static const String good = 'جيد';
   static const String acceptable = 'مقبول';
   static const String weak = 'ضعيف';
-
   static const String doneCumulative = 'تم إكمال التراكمي';
   static const String notDoneCumulative = 'لم يتم التراكمي - لا يمكن إضافة الحفظ';
 }

@@ -20,7 +20,6 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
 
 class SyncStatusNotifier extends StateNotifier<SyncStatus> {
   final SyncService _syncService;
-
   SyncStatusNotifier(this._syncService) : super(SyncStatus.idle);
 
   Future<void> pullData() async {

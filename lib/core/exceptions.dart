@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 class AppException implements Exception {
   final String message;
   final String? details;
   AppException({required this.message, this.details});
-
   @override
   String toString() => 'AppException: $message${details != null ? ' ($details)' : ''}';
 }
@@ -26,19 +24,16 @@ class SyncException extends AppException {
   SyncException(String details) : super(message: 'خطأ في المزامنة', details: details);
 }
 
-// معالج مركزي لعرض الخطأ للمستخدم مع Debounce
 class ErrorHandler {
   static final Map<String, DateTime> _lastShown = {};
-
   static void showError(BuildContext context, AppException error) {
     final key = error.message;
     final now = DateTime.now();
     if (_lastShown.containsKey(key) &&
         now.difference(_lastShown[key]!) < const Duration(seconds: 3)) {
-      return; // تجاهل التكرار السريع
+      return;
     }
     _lastShown[key] = now;
-
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

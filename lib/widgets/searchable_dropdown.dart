@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 
 class SearchableDropdown<T> extends StatefulWidget {
   final List<T> items;
@@ -26,6 +27,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
   final LayerLink _layerLink = LayerLink();
   List<T> filtered = [];
   bool _overlayVisible = false;
+  bool _isFocused = false;
 
   @override
   void initState() {
@@ -38,7 +40,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
     final overlay = Overlay.of(context);
     _overlayEntry = OverlayEntry(
       builder: (ctx) => GestureDetector(
-        onTap: () => _removeOverlay(), // ✅ إغلاق عند النقر خارج القائمة
+        onTap: _removeOverlay,
         child: Stack(
           children: [
             Positioned.fill(child: Container(color: Colors.transparent)),
@@ -46,10 +48,13 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
               width: MediaQuery.of(context).size.width - 32,
               child: CompositedTransformFollower(
                 link: _layerLink,
-                offset: const Offset(0, 48),
+                offset: const Offset(0, 56),
                 child: Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(8),
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(16),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E1E2E)
+                      : Colors.white,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 200),
                     child: ListView.builder(
@@ -58,10 +63,13 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                       itemCount: filtered.length,
                       itemBuilder: (ctx, i) => ListTile(
                         title: Text(widget.labelBuilder(filtered[i])),
+                        hoverColor:
+                            AppTheme.emeraldGreen.withOpacity(0.1),
                         onTap: () {
                           widget.onChanged?.call(filtered[i]);
                           _searchCtrl.text = widget.labelBuilder(filtered[i]);
                           _removeOverlay();
+                          setState(() => _isFocused = false);
                         },
                       ),
                     ),
@@ -75,6 +83,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
     );
     overlay.insert(_overlayEntry!);
     _overlayVisible = true;
+    setState(() => _isFocused = true);
   }
 
   void _removeOverlay() {
@@ -83,6 +92,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
       _overlayEntry!.dispose();
       _overlayEntry = null;
       _overlayVisible = false;
+      setState(() => _isFocused = false);
     }
   }
 
@@ -95,20 +105,44 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return CompositedTransformTarget(
       link: _layerLink,
       child: TextField(
         controller: _searchCtrl,
+        style: TextStyle(color: isDark ? Colors.white : Colors.black),
         decoration: InputDecoration(
           hintText: widget.hint ?? 'بحث...',
-          suffixIcon: const Icon(Icons.arrow_drop_down),
+          hintStyle: TextStyle(
+            color: isDark
+                ? Colors.grey[400]
+                : AppTheme.darkSlate.withOpacity(0.5),
+          ),
+          suffixIcon: Icon(
+            _isFocused ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+            color: AppTheme.emeraldGreen,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: AppTheme.emeraldGreen, width: 2),
+          ),
         ),
         onTap: () {
-          _showOverlay();
+          if (_overlayVisible) {
+            _removeOverlay();
+          } else {
+            _showOverlay();
+          }
         },
         onChanged: (val) {
           setState(() {
-            filtered = widget.items.where((item) => widget.labelBuilder(item).contains(val)).toList();
+            filtered = widget.items
+                .where(
+                    (item) => widget.labelBuilder(item).contains(val))
+                .toList();
           });
           _overlayEntry?.markNeedsBuild();
         },
