@@ -27,18 +27,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ التصحيح: ref.listen بياخد AsyncValue<Session?> من StreamProvider
+    // توجيه إذا انتهت الجلسة
     ref.listen<AsyncValue<Session?>>(authStateProvider, (prev, next) {
-      final session = next.value;
-      final supabaseUser = session?.user;
       if (!mounted) return;
-      if (supabaseUser == null) {
+      if (next.value == null) {
         Navigator.pushReplacementNamed(context, AppRouter.login);
-      } else {
-        Navigator.pushReplacementNamed(context, AppRouter.teacherDashboard);
       }
     });
 
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // توجيه عند معرفة الدور
+    ref.listen<AsyncValue<String?>>(userRoleProvider, (prev, next) {
+      final role = next.value;
+      if (!mounted || role == null) return;
+
+      switch (role) {
+        case 'teacher':
+          Navigator.pushReplacementNamed(context, AppRouter.teacherDashboard);
+          break;
+        case 'student':
+          Navigator.pushReplacementNamed(context, AppRouter.studentDashboard);
+          break;
+        case 'guardian':
+          Navigator.pushReplacementNamed(context, AppRouter.guardianDashboard);
+          break;
+        case 'manager':
+          Navigator.pushReplacementNamed(context, AppRouter.managerDashboard);
+          break;
+        default:
+          Navigator.pushReplacementNamed(context, AppRouter.login);
+      }
+    });
+
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
   }
 }

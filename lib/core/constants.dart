@@ -26,4 +26,4 @@ class AppConstants {
   static const double extraNewPointsPer5 = 6.0;
   static const double completionCumulativeReviewPoints = 6.0;
   static const double extraReviewPointsPer50 = 8.0;
-} 
+}

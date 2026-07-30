@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show Session, AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import '../providers/auth_provider.dart';
 import '../core/strings.dart';
 import '../core/router.dart';
+import '../utils/validators.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -27,22 +29,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _loading = true);
     try {
       await ref.read(authProvider).signIn(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
+      // نجاح: انتقل إلى Splash لتحديد الوجهة بناءً على الدور
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRouter.splash);
+      }
     } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فشل تسجيل الدخول: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل تسجيل الدخول: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -50,15 +59,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ التصحيح: ref.listen بياخد AsyncValue<Session?> من StreamProvider
-    ref.listen<AsyncValue<Session?>>(authStateProvider, (prev, next) {
-      final session = next.value;
-      final user = session?.user;
-      if (user != null && mounted) {
-        Navigator.pushReplacementNamed(context, AppRouter.splash);
-      }
-    });
-
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.login)),
       body: Center(
@@ -70,26 +70,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               key: _formKey,
               child: Column(
                 children: [
+                  // حقل البريد الإلكتروني
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                    decoration: const InputDecoration(
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) => v!.isEmpty ? 'مطلوب' : null,
+                    validator: Validators.email,
                   ),
                   const SizedBox(height: 16),
+
+                  // حقل كلمة المرور
                   TextFormField(
                     controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'كلمة المرور'),
-                    obscureText: true,
-                    validator: (v) => v!.isEmpty ? 'مطلوب' : null,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
+                      ),
+                    ),
+                    validator: Validators.password,
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loading ? null : _login,
-                    child: _loading
-                        ? const CircularProgressIndicator(strokeWidth: 2)
-                        : const Text(AppStrings.login),
+
+                  // زر تسجيل الدخول
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _login,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text(AppStrings.login),
+                    ),
                   ),
+
+                  const SizedBox(height: 12),
+
+                  // رابط إنشاء حساب جديد
                   TextButton(
                     onPressed: () => Navigator.pushNamed(context, AppRouter.register),
                     child: const Text(AppStrings.register),
