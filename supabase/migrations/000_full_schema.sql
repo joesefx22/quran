@@ -202,8 +202,8 @@ BEGIN
 END;
 $$;
 
--- دالة حساب التراكمي (آخر يومين)
-CREATE OR REPLACE FUNCTION get_student_cumulative_pages(student_uuid UUID, current_date DATE)
+-- دالة حساب التراكمي (آخر يومين) - تم تغيير اسم المعامل إلى p_target_date
+CREATE OR REPLACE FUNCTION get_student_cumulative_pages(student_uuid UUID, p_target_date DATE)
 RETURNS NUMERIC AS $$
 DECLARE
   total_pages NUMERIC := 0;
@@ -212,7 +212,7 @@ BEGIN
   FOR day_record IN
     SELECT DISTINCT session_date::DATE AS day
     FROM sessions
-    WHERE student_id = student_uuid AND session_date < current_date
+    WHERE student_id = student_uuid AND session_date < p_target_date
     ORDER BY day DESC
     LIMIT 2
   LOOP

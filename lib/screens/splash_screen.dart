@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/router.dart';
-import '../../core/theme.dart';
-import '../../models/local_user.dart';
-import '../../providers/app_state_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../services/quran_database_service.dart';
-import '../complete_profile_screen.dart';
+import 'package:flutter/services.dart';
+import '../core/router.dart';
+import '../core/theme.dart';
+import '../models/local_user.dart';
+import '../providers/app_state_provider.dart';
+import '../providers/auth_provider.dart';
+import '../services/quran_database_service.dart';
+import 'complete_profile_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -24,7 +25,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void initState() {
     super.initState();
     Future.microtask(() async {
-      await QuranDatabaseService().database;
+      try {
+        await QuranDatabaseService().database;
+      } catch (e) {
+        debugPrint('🔴 خطأ في تهيئة قاعدة بيانات القرآن: $e');
+      }
     });
   }
 
@@ -39,7 +44,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           break;
         case AppState.incompleteProfile:
           final user = ref.read(currentUserProvider).valueOrNull;
-          if (user == null) { _navigated = false; return; }
+          if (user == null) {
+            _navigated = false;
+            return;
+          }
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -73,10 +81,46 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<AppState>>(appStateProvider, (prev, next) {
-      next.whenData((state) {
-        if (state != AppState.loading) _navigate(state);
-      });
+    // 1. مراقبة الحالة الحالية
+    final currentState = ref.watch(appStateProvider);
+    debugPrint('👀 حالة التطبيق الآن من watch: $currentState');
+
+    // 2. الاستماع لأي تغييرات جديدة (بدون fireImmediately)
+    ref.listen<AsyncValue<AppState>>(
+      appStateProvider,
+      (prev, next) {
+        next.when(
+          data: (state) {
+            debugPrint('✅ الحالة وصلت من listen: $state');
+            if (state != AppState.loading) _navigate(state);
+          },
+          error: (error, stackTrace) {
+            debugPrint('🔴 خطأ في Provider من listen: $error');
+            if (!_navigated && mounted) {
+              _navigated = true;
+              Navigator.pushReplacementNamed(context, AppRouter.login);
+            }
+          },
+          loading: () {},
+        );
+      },
+    );
+
+    // 3. البديل السحري لـ fireImmediately: فحص الحالة الحالية فوراً بعد رسم الواجهة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      currentState.when(
+        data: (state) {
+          if (state != AppState.loading) _navigate(state);
+        },
+        error: (error, stackTrace) {
+          debugPrint('🔴 خطأ ممسوك من الـ watch: $error');
+          if (!_navigated && mounted) {
+            _navigated = true;
+            Navigator.pushReplacementNamed(context, AppRouter.login);
+          }
+        },
+        loading: () {},
+      );
     });
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -112,12 +156,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
             ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
             const SizedBox(height: 40),
-            SizedBox(
+            const SizedBox(
               width: 40,
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.warmGold),
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warmGold),
               ),
             ),
           ],

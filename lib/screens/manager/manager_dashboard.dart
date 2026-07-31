@@ -199,15 +199,15 @@ class _ManagerDashboardState extends ConsumerState<ManagerDashboard> {
     try {
       final studentRes = await SupabaseConfig.client
           .from('users')
-          .select('*', const FetchOptions(count: CountOption.exact))
+          .select()
           .eq('role', 'student');
       final teacherRes = await SupabaseConfig.client
           .from('users')
-          .select('*', const FetchOptions(count: CountOption.exact))
+          .select()
           .eq('role', 'teacher');
       return {
-        'students': studentRes.count ?? 0,
-        'teachers': teacherRes.count ?? 0,
+        'students': studentRes.length,
+        'teachers': teacherRes.length,
       };
     } catch (_) {
       return {'students': 0, 'teachers': 0};

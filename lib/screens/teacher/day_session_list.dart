@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import '../../providers/teacher_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/local_user.dart';
@@ -9,7 +10,8 @@ import '../../widgets/student_card.dart';
 import '../../widgets/student_edit_dialog.dart';
 import '../../services/supabase_config.dart';
 import 'session_form.dart';
-import '../core/theme.dart';
+import '../../core/theme.dart';
+import '../../widgets/empty_state.dart'; // أو مسار الـ EmptyState widget عندك
 
 final groupStudentsProvider = FutureProvider.family<List<LocalUser>, String>((ref, groupId) {
   return ref.read(teacherProvider).getGroupStudents(groupId);
@@ -28,8 +30,10 @@ class DaySessionList extends ConsumerWidget {
       body: studentsAsync.when(
         data: (students) {
           if (students.isEmpty) {
-            return const Center(
-              child: EmptyState(message: 'لا يوجد طلاب في مجموعتك حالياً.', icon: Icons.sentiment_neutral),
+            return Center(   // تم إزالة const من هنا
+              child: EmptyState(
+                  message: 'لا يوجد طلاب في مجموعتك حالياً.',
+                  icon: Icons.sentiment_neutral),
             );
           }
           return RefreshIndicator(
@@ -68,7 +72,7 @@ class DaySessionList extends ConsumerWidget {
       },
       child: StudentCard(
         student: student,
-        attendancePercent: 100, // سيتم حسابه لاحقاً
+        attendancePercent: 100,
         onTap: null,
         index: index,
       ).animate().fadeIn(delay: (50 * index).ms).slideX(begin: 0.05, end: 0),

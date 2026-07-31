@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../core/theme.dart';
-import '../widgets/islamic_header.dart';
+import 'package:flutter/services.dart';
+import '../../core/theme.dart';
+import '../../widgets/islamic_header.dart';
 import 'day_session_list.dart';
 
 class TeacherDashboard extends ConsumerWidget {
@@ -49,7 +50,7 @@ class TeacherDashboard extends ConsumerWidget {
                             'assets/icons/quran_icon.svg',
                             width: 40,
                             height: 40,
-                            colorFilter: const ColorFilter.mode(AppTheme.emeraldGreen, BlendMode.srcIn),
+                            colorFilter: ColorFilter.mode(AppTheme.emeraldGreen, BlendMode.srcIn), // إزالة const
                           ),
                         ),
                         const SizedBox(width: 20),

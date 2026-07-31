@@ -58,7 +58,7 @@ class IslamicHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTypography.headline(context).copyWith(
+                  style: AppTypography.headline().copyWith(     // تم إزالة context
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -68,7 +68,7 @@ class IslamicHeader extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle!,
-                    style: AppTypography.body(context).copyWith(
+                    style: AppTypography.body().copyWith(        // تم إزالة context
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 14,
                     ),

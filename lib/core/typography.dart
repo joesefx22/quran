@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTypography {
-  // الخط الأساسي للواجهة
   static final TextStyle baseStyle = GoogleFonts.cairo();
 
-  // أنماط النص القرآني (خط عثماني)
   static const String quranFontFamily = 'Uthmanic';
 
   static TextStyle quranAyah({double fontSize = 22, Color? color}) {
@@ -18,24 +16,23 @@ class AppTypography {
     );
   }
 
-  // أنماط جاهزة للعناوين والنصوص
-  static TextStyle headline(BuildContext context) {
-    return Theme.of(context).textTheme.headlineMedium!.copyWith(
-          fontFamily: baseStyle.fontFamily,
-          fontWeight: FontWeight.bold,
-        );
+  static TextStyle headline({Color? color}) {
+    return baseStyle.copyWith(
+      fontWeight: FontWeight.bold,
+      color: color,
+    );
   }
 
-  static TextStyle body(BuildContext context) {
-    return Theme.of(context).textTheme.bodyLarge!.copyWith(
-          fontFamily: baseStyle.fontFamily,
-        );
+  static TextStyle body({Color? color}) {
+    return baseStyle.copyWith(
+      color: color,
+    );
   }
 
-  static TextStyle button(BuildContext context) {
-    return Theme.of(context).textTheme.labelLarge!.copyWith(
-          fontFamily: baseStyle.fontFamily,
-          fontWeight: FontWeight.w600,
-        );
+  static TextStyle button({Color? color}) {
+    return baseStyle.copyWith(
+      fontWeight: FontWeight.w600,
+      color: color,
+    );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';                  // تمت الإضافة
 import '../../models/local_user.dart';
 import '../../models/student_profile.dart';
 import '../../models/student_week_stats.dart';
@@ -65,7 +65,6 @@ class StudentDashboard extends ConsumerWidget {
                         CircleAvatar(
                           radius: 42,
                           backgroundColor: AppTheme.emeraldGreen,
-                          backgroundImage: null,
                           child: Text(
                             user.fullName.isNotEmpty ? user.fullName[0] : '?',
                             style: const TextStyle(fontSize: 32, color: Colors.white),
@@ -214,7 +213,7 @@ class StudentDashboard extends ConsumerWidget {
                 height: 56,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    HapticFeedback.mediumImpact();
+                    HapticFeedback.mediumImpact();       // الآن معرفة
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen()));
                   },
                   icon: const Icon(Icons.leaderboard, color: Colors.white),

@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/session_result.dart';
 import '../models/session_submission.dart';
 import '../models/student_profile.dart';
+import '../models/session_part.dart';             // <-- تمت الإضافة
 import '../services/quran_database_service.dart';
 import '../utils/session_points_calculator.dart';
 

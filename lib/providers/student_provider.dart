@@ -59,9 +59,10 @@ class StudentController {
         final pts = (s['total_points'] as num?)?.toDouble() ?? 0;
         total += pts;
         if (pts > best) best = pts;
-        if ((s['early_attendance_points'] as num?)?.toDouble() ?? 0 > 0) earlyAtt++;
-        if ((s['early_recitation_points'] as num?)?.toDouble() ?? 0 > 0) earlyRec++;
-        if ((s['departure_points'] as num?)?.toDouble() ?? 0 > 0) onTimeDep++;
+        // تم إصلاح المقارنات بإضافة أقواس
+        if (((s['early_attendance_points'] as num?)?.toDouble() ?? 0) > 0) earlyAtt++;
+        if (((s['early_recitation_points'] as num?)?.toDouble() ?? 0) > 0) earlyRec++;
+        if (((s['departure_points'] as num?)?.toDouble() ?? 0) > 0) onTimeDep++;
         memoPages += (s['new_pages'] as num?)?.toDouble() ?? 0;
         revPages += (s['review_pages'] as num?)?.toDouble() ?? 0;
         cumPages += (s['cumulative_pages'] as num?)?.toDouble() ?? 0;

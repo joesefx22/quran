@@ -18,8 +18,7 @@ class SessionPointsCalculator {
     required bool cumulativeDone,
   }) {
     if (!attended) {
-      // إذا لم يحضر، كل النقاط صفر
-      return SessionResult(
+      return const SessionResult(
         totalPoints: 0,
         attendancePoints: 0,
         earlyAttendancePoints: 0,
@@ -36,12 +35,11 @@ class SessionPointsCalculator {
       );
     }
 
-    final attendancePts = SessionConstants.attendance;
-    final earlyAttPts = earlyAttendance ? SessionConstants.earlyAttendance : 0;
-    final earlyRecPts = earlyRecitation ? SessionConstants.earlyRecitation : 0;
-    final departurePts = onTimeDeparture ? SessionConstants.onTimeDeparture : 0;
+    final double attendancePts = SessionConstants.attendance.toDouble();  // تأكيد النوع double
+    final double earlyAttPts = earlyAttendance ? SessionConstants.earlyAttendance.toDouble() : 0;
+    final double earlyRecPts = earlyRecitation ? SessionConstants.earlyRecitation.toDouble() : 0;
+    final double departurePts = onTimeDeparture ? SessionConstants.onTimeDeparture.toDouble() : 0;
 
-    // ---- الجديد ----
     double newBasePoints = 0, newExtraPoints = 0, newPages = 0;
     if (!skippedNew && newTarget > 0) {
       final sortedNew = List<PartInput>.from(newParts)
@@ -59,11 +57,10 @@ class SessionPointsCalculator {
       }
     }
 
-    // ---- المراجعة والتراكمي ----
     double reviewBasePoints = 0, cumulativePoints = 0, reviewExtraPoints = 0;
     double reviewPages = 0;
-    final effectiveCumulative = cumulativeDone ? cumulativeTarget : 0;
-    final denominator = reviewTarget + cumulativeTarget;
+    final double effectiveCumulative = cumulativeDone ? cumulativeTarget : 0;
+    final double denominator = reviewTarget + cumulativeTarget;
 
     if (!skippedReview && denominator > 0) {
       final sortedReview = List<PartInput>.from(reviewParts)
@@ -82,7 +79,7 @@ class SessionPointsCalculator {
       cumulativePoints = (effectiveCumulative / denominator) * SessionConstants.reviewAndCumulativeReward;
     }
 
-    final totalPoints = attendancePts + earlyAttPts + earlyRecPts + departurePts +
+    final double totalPoints = attendancePts + earlyAttPts + earlyRecPts + departurePts +
         newBasePoints + newExtraPoints + reviewBasePoints + cumulativePoints + reviewExtraPoints;
 
     return SessionResult(

@@ -29,14 +29,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  build_runner: ^2.15.1
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/quran.db
-    - assets/icons/              # سنضع أيقونات SVG هنا إن وجدت
-  fonts:
-    - family: Uthmanic
-      fonts:
-        - asset: assets/fonts/KFGQPC_Uthmanic_Script.ttf
-          weight: 400
+    # - assets/icons/   # مائتة مؤقتاً لحين إضافة أيقونات فيها
+
+  # fonts:
+  #   - family: Uthmanic
+  #     fonts:
+  #       - asset: assets/fonts/KFGQPC_Uthmanic_Script.ttf
+  #         weight: 400

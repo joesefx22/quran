@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import '../services/supabase_config.dart';
 import '../core/router.dart';
 import '../core/theme.dart';
@@ -125,7 +126,9 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
               mosquesAsync.when(
                 data: (mosques) => DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: 'المسجد', prefixIcon: Icon(Icons.mosque)),
-                  items: mosques.map((m) => DropdownMenuItem(value: m['id'], child: Text(m['name']))).toList(),
+                  items: mosques.map<DropdownMenuItem<String>>((m) =>
+                    DropdownMenuItem<String>(value: m['id'], child: Text(m['name']))
+                  ).toList(),
                   onChanged: (v) { setState(() { _selectedMosqueId = v; _selectedGroupId = null; }); },
                   validator: (v) => v == null ? 'اختر المسجد' : null,
                 ),
@@ -137,7 +140,9 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
                 ref.watch(groupsProvider(_selectedMosqueId!)).when(
                   data: (groups) => DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'المجموعة', prefixIcon: Icon(Icons.group_work)),
-                    items: groups.map((g) => DropdownMenuItem(value: g['id'], child: Text(g['name']))).toList(),
+                    items: groups.map<DropdownMenuItem<String>>((g) =>
+                      DropdownMenuItem<String>(value: g['id'], child: Text(g['name']))
+                    ).toList(),
                     onChanged: (v) { setState(() { _selectedGroupId = v; }); },
                     validator: (v) => v == null ? 'اختر المجموعة' : null,
                   ),

@@ -19,6 +19,8 @@ class QuranHalaqaApp extends StatelessWidget {
     return MaterialApp(
       title: 'حلقة القرآن',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,            // يتبع إعدادات النظام تلقائياً
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
