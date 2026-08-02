@@ -21,6 +21,7 @@ class SessionPartSubmission {
 }
 
 class SessionSubmission {
+  final String? sessionId; // اختياري، يستخدم عند تعديل جلسة قديمة
   final String studentSupabaseId;
   final String groupSupabaseId;
   final String teacherSupabaseId;
@@ -35,6 +36,7 @@ class SessionSubmission {
   final List<SessionPartSubmission> parts;
 
   const SessionSubmission({
+    this.sessionId,
     required this.studentSupabaseId,
     required this.groupSupabaseId,
     required this.teacherSupabaseId,

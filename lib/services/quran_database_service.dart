@@ -34,11 +34,21 @@ class QuranDatabaseService {
         final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
         await databaseFactory.writeDatabaseBytes(dbPath, Uint8List.fromList(bytes));
       } catch (e) {
-        throw Exception('فشل نسخ قاعدة البيانات من assets: $e');
+        throw Exception('فشل نسخ قاعدة بيانات القرآن من assets: $e');
       }
     }
 
     return await openDatabase(dbPath, readOnly: true);
+  }
+
+  /// التحقق من جاهزية قاعدة البيانات قبل الاستخدام
+  Future<bool> isDatabaseReady() async {
+    try {
+      await database;
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<List<Map<String, dynamic>>> getSurahs() async {
@@ -69,7 +79,6 @@ class QuranDatabaseService {
     final db = await database;
 
     if (suraStart == suraEnd) {
-      // حالة نفس السورة: استعلام بسيط وآمن
       final result = await db.rawQuery('''
         SELECT DISTINCT page FROM mytable
         WHERE sora = ? AND aya_no >= ? AND aya_no <= ?
@@ -77,7 +86,6 @@ class QuranDatabaseService {
       ''', [suraStart, ayaStart, ayaEnd]);
       return result.map<int>((r) => r['page'] as int).toList();
     } else {
-      // حالة سور متعددة
       final result = await db.rawQuery('''
         SELECT DISTINCT page FROM mytable
         WHERE
@@ -94,18 +102,23 @@ class QuranDatabaseService {
     }
   }
 
+  /// حساب عدد الصفحات مع معالجة الأخطاء – لا يرجع صفرًا بل يرمي استثناءً
   Future<double> calculatePages({
     required int suraStart,
     required int ayaStart,
     required int suraEnd,
     required int ayaEnd,
   }) async {
-    final pages = await getPages(
-      suraStart: suraStart,
-      ayaStart: ayaStart,
-      suraEnd: suraEnd,
-      ayaEnd: ayaEnd,
-    );
-    return pages.length.toDouble();
+    try {
+      final pages = await getPages(
+        suraStart: suraStart,
+        ayaStart: ayaStart,
+        suraEnd: suraEnd,
+        ayaEnd: ayaEnd,
+      );
+      return pages.length.toDouble();
+    } catch (e) {
+      throw Exception('قاعدة بيانات القرآن غير متاحة حالياً، تأكد من تثبيت التطبيق بشكل صحيح');
+    }
   }
 }

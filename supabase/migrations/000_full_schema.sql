@@ -117,7 +117,7 @@ ALTER TABLE student_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_parts ENABLE ROW LEVEL SECURITY;
 
--- 6. سياسات RLS
+-- 6. سياسات RLS (نفس السياسات السابقة دون تغيير)
 -- المساجد والمجموعات: قراءة عامة
 CREATE POLICY "Everyone can read mosques" ON mosques FOR SELECT USING (true);
 CREATE POLICY "Everyone can read groups" ON groups FOR SELECT USING (true);
@@ -131,7 +131,6 @@ CREATE POLICY "Teacher sees group students" ON users FOR SELECT USING (
   EXISTS (SELECT 1 FROM users AS teacher WHERE teacher.id = auth.uid()
           AND teacher.role = 'teacher' AND users.group_id = teacher.group_id)
 );
--- 🔥 سياسة جديدة: السماح للطلاب برؤية أسماء زملائهم في المجموعة
 CREATE POLICY "Students can see group members names" ON users FOR SELECT USING (
   auth.uid() = id
   OR
@@ -176,7 +175,6 @@ CREATE POLICY "Teacher sees group sessions" ON sessions FOR SELECT USING (
 CREATE POLICY "Teacher inserts sessions" ON sessions FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher')
 );
--- 🔥 سياسات جديدة للمعلم للتعديل والحذف
 CREATE POLICY "Teacher can update own sessions" ON sessions FOR UPDATE USING (
   EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher')
   AND teacher_id = auth.uid()
@@ -206,7 +204,6 @@ CREATE POLICY "Teacher inserts session parts" ON session_parts FOR INSERT WITH C
     AND EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher' AND group_id = sessions.group_id)
   )
 );
--- 🔥 سياسات جديدة للمعلم لتعديل وحذف أجزاء جلساته
 CREATE POLICY "Teacher can update own session parts" ON session_parts FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM sessions s JOIN users u ON u.id = auth.uid()
@@ -237,26 +234,27 @@ BEGIN
 END;
 $$;
 
+-- 🔥 دالة cumulative صحيحة: تجلب مجموع صفحات الحفظ لآخر يومين مختلفين
 CREATE OR REPLACE FUNCTION get_student_cumulative_pages(student_uuid UUID, p_target_date DATE)
 RETURNS NUMERIC AS $$
 DECLARE
   total_pages NUMERIC := 0;
-  day_record RECORD;
 BEGIN
-  FOR day_record IN
-    SELECT DISTINCT session_date::DATE AS day
-    FROM sessions
-    WHERE student_id = student_uuid AND session_date < p_target_date
-    ORDER BY day DESC
-    LIMIT 2
-  LOOP
-    SELECT COALESCE(SUM(sp.pages_count), 0) INTO total_pages
-    FROM sessions s
-    JOIN session_parts sp ON sp.session_id = s.id
-    WHERE s.student_id = student_uuid
-      AND s.session_date::DATE = day_record.day
-      AND sp.type = 'memorization';
-  END LOOP;
+  SELECT COALESCE(SUM(sp.pages_count), 0)
+  INTO total_pages
+  FROM sessions s
+  JOIN session_parts sp ON sp.session_id = s.id
+  WHERE s.student_id = student_uuid
+    AND sp.type = 'memorization'
+    AND s.session_date IN (
+      SELECT session_date
+      FROM sessions
+      WHERE student_id = student_uuid
+        AND session_date < p_target_date
+      GROUP BY session_date
+      ORDER BY session_date DESC
+      LIMIT 2
+    );
   RETURN total_pages;
 END;
 $$ LANGUAGE plpgsql;

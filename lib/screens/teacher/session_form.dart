@@ -39,10 +39,31 @@ class _SessionFormState extends ConsumerState<SessionForm> {
   final List<_PartEntry> _newParts = [];
   final List<_PartEntry> _reviewParts = [];
 
+  bool _isEditing = false;  // هل هناك تقرير موجود مسبقاً؟
+  bool _saving = false;     // لمنع الضغط المزدوج
+
   @override
   void initState() {
     super.initState();
     _newParts.add(_PartEntry());
+    _checkExistingSession();
+  }
+
+  Future<void> _checkExistingSession() async {
+    try {
+      final exists = await ref.read(teacherProvider).hasSessionToday(
+        widget.student.supabaseId,
+        widget.teacherId,
+        DateTime.now(),
+      );
+      if (mounted) {
+        setState(() {
+          _isEditing = exists;
+        });
+      }
+    } catch (_) {
+      // في حالة فشل التحقق نتعامل كأنه لا يوجد تقرير
+    }
   }
 
   Widget _buildPartCard(_PartEntry part, List<Map<String, dynamic>> surahs, {required bool isNew}) {
@@ -160,7 +181,7 @@ class _SessionFormState extends ConsumerState<SessionForm> {
               ),
               minLines: 1,
               maxLines: 3,
-              onChanged: (v) {}, // ملاحظات غير مطلوبة حالياً، لكن موجودة
+              onChanged: (v) => part.notes = v, // الملاحظات تُحفظ الآن
             ),
           ],
         ),
@@ -234,9 +255,14 @@ class _SessionFormState extends ConsumerState<SessionForm> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton.icon(
-                    onPressed: _submit,
-                    icon: const Icon(Icons.save_rounded, color: Colors.white),
-                    label: const Text('حفظ التقرير', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    onPressed: _saving ? null : _submit,
+                    icon: _saving
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.save_rounded, color: Colors.white),
+                    label: Text(
+                      _isEditing ? 'تعديل التقرير' : 'حفظ التقرير',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.emeraldGreen,
                       foregroundColor: Colors.white,
@@ -266,6 +292,9 @@ class _SessionFormState extends ConsumerState<SessionForm> {
   }
 
   Future<void> _submit() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
     final parts = <SessionPartSubmission>[];
     parts.addAll(_newParts.where((p) => p.isValid).map((p) => SessionPartSubmission(
       type: SessionType.memorization,
@@ -274,6 +303,7 @@ class _SessionFormState extends ConsumerState<SessionForm> {
       suraEnd: p.suraEnd,
       ayaEnd: p.ayaEnd,
       evaluation: p.evaluation,
+      notes: p.notes,
     )));
     parts.addAll(_reviewParts.where((p) => p.isValid).map((p) => SessionPartSubmission(
       type: SessionType.review,
@@ -282,13 +312,14 @@ class _SessionFormState extends ConsumerState<SessionForm> {
       suraEnd: p.suraEnd,
       ayaEnd: p.ayaEnd,
       evaluation: p.evaluation,
+      notes: p.notes,
     )));
 
     final submission = SessionSubmission(
       studentSupabaseId: widget.student.supabaseId,
       groupSupabaseId: widget.groupId,
       teacherSupabaseId: widget.teacherId,
-      sessionDate: DateTime.now(),
+      sessionDate: DateTime.now(), // سيتم تصحيحه داخل SessionService
       attended: _attended,
       earlyAttendance: _earlyAttendance,
       earlyRecitation: _earlyRecitation,
@@ -306,7 +337,15 @@ class _SessionFormState extends ConsumerState<SessionForm> {
       await showDialog(context: context, builder: (_) => SessionPointsDialog(result: result));
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل الحفظ: تأكد من اتصال الإنترنت')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 }
@@ -317,6 +356,7 @@ class _PartEntry {
   int suraEnd = 0;
   int ayaEnd = 0;
   String? evaluation = 'ممتاز';
+  String? notes;
 
   bool get isValid => suraStart > 0 && ayaStart > 0 && suraEnd > 0 && ayaEnd > 0;
 }

@@ -27,6 +27,11 @@ class TeacherController {
     return _sessionService.submitFullSession(submission);
   }
 
+  /// يتحقق مما إذا كان هناك تقرير سابق لنفس الطالب/المعلم/اليوم
+  Future<bool> hasSessionToday(String studentId, String teacherId, DateTime date) {
+    return _sessionService.hasSessionToday(studentId, teacherId, date);
+  }
+
   Future<List<LocalUser>> getGroupStudents(String groupSupabaseId) async {
     final data = await _client
         .from('users')
@@ -57,7 +62,6 @@ class TeacherController {
   }
 
   Future<String> getCumulativeSuggestion(String studentSupabaseId) async {
-    // مقترح بسيط: يمكن استخدام service لاحقاً
     return "يُحسب تلقائياً من آخر يومين";
   }
 

@@ -22,6 +22,7 @@ class SessionService {
     final newPartInputs = <PartInput>[];
     final reviewPartInputs = <PartInput>[];
 
+    // إذا فشل حساب الصفحات هنا سيتم رمي استثناء ويتوقف الحفظ
     for (final part in submission.parts) {
       final pages = await _quranDb.calculatePages(
         suraStart: part.suraStart,
@@ -61,76 +62,31 @@ class SessionService {
     return result;
   }
 
-  Future<double> _getCumulativePages(String studentId, DateTime today) async {
-    final rows = await _client
-        .from('sessions')
-        .select('session_date')
-        .eq('student_id', studentId)
-        .lt('session_date', today.toIso8601String())
-        .order('session_date', ascending: false);
-
-    final uniqueDays = <String>{};
-    for (final row in rows) {
-      final date = DateTime.parse(row['session_date']);
-      final dayKey =
-          '${date.year.toString().padLeft(4, '0')}-'
-          '${date.month.toString().padLeft(2, '0')}-'
-          '${date.day.toString().padLeft(2, '0')}';
-      uniqueDays.add(dayKey);
-      if (uniqueDays.length == 2) break;
-    }
-
-    double total = 0;
-    for (final day in uniqueDays) {
-      final startOfDay = '${day}T00:00:00';
-      final endOfDay = '${day}T23:59:59';
-      final sessions = await _client
-          .from('sessions')
-          .select('id')
-          .eq('student_id', studentId)
-          .gte('session_date', startOfDay)
-          .lte('session_date', endOfDay);
-
-      for (final session in sessions) {
-        final parts = await _client
-            .from('session_parts')
-            .select('pages_count')
-            .eq('session_id', session['id'])
-            .eq('type', 'memorization');
-        for (final part in parts) {
-          total += (part['pages_count'] as num).toDouble();
-        }
-      }
-    }
-    return total;
-  }
-
-  Future<StudentProfile> _getStudentProfile(String studentId) async {
-    final data = await _client
-        .from('student_profiles')
-        .select()
-        .eq('user_id', studentId)
-        .maybeSingle(); // تم التغيير من .single() إلى .maybeSingle()
-
-    if (data == null) {
-      // في حالة عدم وجود ملف، نعيد قيماً افتراضية
-      return StudentProfile()
-        ..userSupabaseId = studentId
-        ..newPagesTarget = 5
-        ..reviewPagesTarget = 50;
-    }
-    return StudentProfile()
-      ..userSupabaseId = studentId
-      ..newPagesTarget = data['new_pages_target']
-      ..reviewPagesTarget = data['review_pages_target'];
-  }
-
   Future<String> _saveSession(SessionSubmission submission, SessionResult result) async {
-    final row = await _client.from('sessions').insert({
+    final existing = await _client
+        .from('sessions')
+        .select('id')
+        .eq('student_id', submission.studentSupabaseId)
+        .eq('teacher_id', submission.teacherSupabaseId)
+        .eq(
+          'session_date',
+          DateTime(
+            submission.sessionDate.year,
+            submission.sessionDate.month,
+            submission.sessionDate.day,
+          ).toIso8601String().split('T')[0],
+        )
+        .maybeSingle();
+
+    final data = {
       'student_id': submission.studentSupabaseId,
       'group_id': submission.groupSupabaseId,
       'teacher_id': submission.teacherSupabaseId,
-      'session_date': submission.sessionDate.toIso8601String(),
+      'session_date': DateTime(
+        submission.sessionDate.year,
+        submission.sessionDate.month,
+        submission.sessionDate.day,
+      ).toIso8601String().split('T')[0],
       'attended': submission.attended,
       'early_attendance': submission.earlyAttendance,
       'early_recitation': submission.earlyRecitation,
@@ -151,19 +107,88 @@ class SessionService {
       'new_pages': result.newPages,
       'review_pages': result.reviewPages,
       'cumulative_pages': result.cumulativePages,
-    }).select('id').single();
+    };
 
-    return row['id'];
+    if (existing != null) {
+      final sessionId = existing['id'];
+      await _client.from('sessions').update(data).eq('id', sessionId);
+      await _client.from('session_parts').delete().eq('session_id', sessionId);
+      return sessionId;
+    } else {
+      final inserted = await _client.from('sessions').insert(data).select('id').single();
+      return inserted['id'];
+    }
+  }
+
+  Future<double> _getCumulativePages(String studentId, DateTime today) async {
+    final rows = await _client
+        .from('sessions')
+        .select('session_date, new_pages')
+        .eq('student_id', studentId)
+        .lt(
+          'session_date',
+          DateTime(today.year, today.month, today.day).toIso8601String().split('T')[0],
+        )
+        .order('session_date', ascending: false);
+
+    double total = 0;
+    final seenDays = <String>{};
+
+    for (final row in rows) {
+      final dateStr = row['session_date'].toString().split('T')[0];
+      if (!seenDays.contains(dateStr)) {
+        if (seenDays.length >= 2) break;
+        seenDays.add(dateStr);
+      }
+      total += (row['new_pages'] as num).toDouble();
+    }
+
+    return total;
+  }
+
+  Future<bool> hasSessionToday(String studentId, String teacherId, DateTime date) async {
+    final result = await _client
+        .from('sessions')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('teacher_id', teacherId)
+        .eq(
+          'session_date',
+          DateTime(date.year, date.month, date.day).toIso8601String().split('T')[0],
+        )
+        .maybeSingle();
+    return result != null;
+  }
+
+  Future<StudentProfile> _getStudentProfile(String studentId) async {
+    final data = await _client
+        .from('student_profiles')
+        .select()
+        .eq('user_id', studentId)
+        .maybeSingle();
+
+    if (data == null) {
+      return StudentProfile()
+        ..userSupabaseId = studentId
+        ..newPagesTarget = 5
+        ..reviewPagesTarget = 50;
+    }
+    return StudentProfile()
+      ..userSupabaseId = studentId
+      ..newPagesTarget = data['new_pages_target']
+      ..reviewPagesTarget = data['review_pages_target'];
   }
 
   Future<void> _saveParts(String sessionId, SessionSubmission submission) async {
     for (final part in submission.parts) {
+      // calculatePages قد ترمي استثناء، وسيتم التعامل معه في المستدعي (submitFullSession)
       final pages = await _quranDb.calculatePages(
         suraStart: part.suraStart,
         ayaStart: part.ayaStart,
         suraEnd: part.suraEnd,
         ayaEnd: part.ayaEnd,
       );
+
       await _client.from('session_parts').insert({
         'session_id': sessionId,
         'type': part.type.name,
