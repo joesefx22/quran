@@ -67,20 +67,31 @@ class QuranDatabaseService {
     required int ayaEnd,
   }) async {
     final db = await database;
-    final result = await db.rawQuery('''
-      SELECT DISTINCT page
-      FROM mytable
-      WHERE
-        (sora = ? AND aya_no >= ?)
-        OR (sora > ? AND sora < ?)
-        OR (sora = ? AND aya_no <= ?)
-      ORDER BY page
-    ''', [
-      suraStart, ayaStart,
-      suraStart, suraEnd,
-      suraEnd, ayaEnd,
-    ]);
-    return result.map<int>((r) => r['page'] as int).toList();
+
+    if (suraStart == suraEnd) {
+      // حالة نفس السورة: استعلام بسيط وآمن
+      final result = await db.rawQuery('''
+        SELECT DISTINCT page FROM mytable
+        WHERE sora = ? AND aya_no >= ? AND aya_no <= ?
+        ORDER BY page
+      ''', [suraStart, ayaStart, ayaEnd]);
+      return result.map<int>((r) => r['page'] as int).toList();
+    } else {
+      // حالة سور متعددة
+      final result = await db.rawQuery('''
+        SELECT DISTINCT page FROM mytable
+        WHERE
+          (sora = ? AND aya_no >= ?)
+          OR (sora > ? AND sora < ?)
+          OR (sora = ? AND aya_no <= ?)
+        ORDER BY page
+      ''', [
+        suraStart, ayaStart,
+        suraStart, suraEnd,
+        suraEnd, ayaEnd,
+      ]);
+      return result.map<int>((r) => r['page'] as int).toList();
+    }
   }
 
   Future<double> calculatePages({

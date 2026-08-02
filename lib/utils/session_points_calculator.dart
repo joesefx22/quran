@@ -35,7 +35,7 @@ class SessionPointsCalculator {
       );
     }
 
-    final double attendancePts = SessionConstants.attendance.toDouble();  // تأكيد النوع double
+    final double attendancePts = SessionConstants.attendance.toDouble();
     final double earlyAttPts = earlyAttendance ? SessionConstants.earlyAttendance.toDouble() : 0;
     final double earlyRecPts = earlyRecitation ? SessionConstants.earlyRecitation.toDouble() : 0;
     final double departurePts = onTimeDeparture ? SessionConstants.onTimeDeparture.toDouble() : 0;
@@ -57,9 +57,9 @@ class SessionPointsCalculator {
       }
     }
 
-    double reviewBasePoints = 0, cumulativePoints = 0, reviewExtraPoints = 0;
+    // ---- المراجعة الأساسية (بدون التراكمي) ----
+    double reviewBasePoints = 0, reviewExtraPoints = 0;
     double reviewPages = 0;
-    final double effectiveCumulative = cumulativeDone ? cumulativeTarget : 0;
     final double denominator = reviewTarget + cumulativeTarget;
 
     if (!skippedReview && denominator > 0) {
@@ -72,10 +72,19 @@ class SessionPointsCalculator {
         final basic = part.pages.clamp(0, remaining);
         final extra = part.pages - basic;
         reviewBasePoints += (basic / denominator) * SessionConstants.reviewAndCumulativeReward * factor;
-        reviewExtraPoints += (extra / reviewTarget) * SessionConstants.reviewExtraReward * factor;
+        // حماية من القسمة على صفر
+        if (reviewTarget > 0) {
+          reviewExtraPoints += (extra / reviewTarget) * SessionConstants.reviewExtraReward * factor;
+        }
         remaining -= basic;
         reviewPages += part.pages;
       }
+    }
+
+    // ---- التراكمي (أصبح مستقلاً تماماً عن شرط المراجعة) ----
+    double cumulativePoints = 0;
+    final double effectiveCumulative = cumulativeDone ? cumulativeTarget : 0;
+    if (denominator > 0) {
       cumulativePoints = (effectiveCumulative / denominator) * SessionConstants.reviewAndCumulativeReward;
     }
 

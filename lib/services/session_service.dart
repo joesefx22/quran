@@ -2,7 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/session_result.dart';
 import '../models/session_submission.dart';
 import '../models/student_profile.dart';
-import '../models/session_part.dart';             // <-- تمت الإضافة
+import '../models/session_part.dart';
 import '../services/quran_database_service.dart';
 import '../utils/session_points_calculator.dart';
 
@@ -21,7 +21,6 @@ class SessionService {
 
     final newPartInputs = <PartInput>[];
     final reviewPartInputs = <PartInput>[];
-    double totalNewPages = 0, totalReviewPages = 0;
 
     for (final part in submission.parts) {
       final pages = await _quranDb.calculatePages(
@@ -32,10 +31,8 @@ class SessionService {
       );
       if (part.type == SessionType.memorization) {
         newPartInputs.add(PartInput(pages: pages, evaluation: part.evaluation));
-        totalNewPages += pages;
       } else {
         reviewPartInputs.add(PartInput(pages: pages, evaluation: part.evaluation));
-        totalReviewPages += pages;
       }
     }
 
@@ -113,7 +110,15 @@ class SessionService {
         .from('student_profiles')
         .select()
         .eq('user_id', studentId)
-        .single();
+        .maybeSingle(); // تم التغيير من .single() إلى .maybeSingle()
+
+    if (data == null) {
+      // في حالة عدم وجود ملف، نعيد قيماً افتراضية
+      return StudentProfile()
+        ..userSupabaseId = studentId
+        ..newPagesTarget = 5
+        ..reviewPagesTarget = 50;
+    }
     return StudentProfile()
       ..userSupabaseId = studentId
       ..newPagesTarget = data['new_pages_target']
