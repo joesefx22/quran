@@ -117,7 +117,7 @@ ALTER TABLE student_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_parts ENABLE ROW LEVEL SECURITY;
 
--- 6. سياسات RLS (نفس السياسات السابقة دون تغيير)
+-- 6. سياسات RLS
 -- المساجد والمجموعات: قراءة عامة
 CREATE POLICY "Everyone can read mosques" ON mosques FOR SELECT USING (true);
 CREATE POLICY "Everyone can read groups" ON groups FOR SELECT USING (true);
@@ -234,7 +234,7 @@ BEGIN
 END;
 $$;
 
--- 🔥 دالة cumulative صحيحة: تجلب مجموع صفحات الحفظ لآخر يومين مختلفين
+-- دالة cumulative مصححة: تجلب مجموع صفحات الحفظ لآخر جلستين (وليس آخر يومين تقويميين)
 CREATE OR REPLACE FUNCTION get_student_cumulative_pages(student_uuid UUID, p_target_date DATE)
 RETURNS NUMERIC AS $$
 DECLARE
@@ -311,6 +311,9 @@ DELETE FROM public.users WHERE email IN ('manager@test.com', 'teacher@test.com',
 INSERT INTO mosques (id, name) VALUES ('00000000-0000-0000-0000-000000000001', 'المسجد النموذجي');
 INSERT INTO groups (id, mosque_id, name) VALUES ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'حلقة القرآن');
 
+-- ⛔ تعطيل المؤقت مؤقتاً للسماح بإدخال بيانات البذرة
+ALTER TABLE users DISABLE TRIGGER before_user_insert;
+
 -- إنشاء مستخدمين في auth.users
 DO $$
 DECLARE
@@ -355,3 +358,6 @@ BEGIN
     (v_student_id, 4, 20);
 
 END $$;
+
+-- ✅ إعادة تفعيل المؤقت
+ALTER TABLE users ENABLE TRIGGER before_user_insert;
