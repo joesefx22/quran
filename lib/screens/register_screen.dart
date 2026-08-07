@@ -20,7 +20,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  String _role = 'student';
   bool _loading = false;
 
   @override
@@ -42,11 +41,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       if (res.user != null) {
         try {
+          // إدراج المستخدم تلقائياً كطالب، profile_completed = false
           await SupabaseConfig.client.from('users').insert({
             'id': res.user!.id,
             'email': _emailController.text.trim(),
             'full_name': _nameController.text.trim(),
-            'role': _role,
+            'role': 'student',
             'profile_completed': false,
           });
           if (!mounted) return;
@@ -58,19 +58,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 userId: res.user!.id,
                 email: _emailController.text.trim(),
                 fullName: _nameController.text.trim(),
-                role: _role,
+                role: 'student',
               ),
             ),
           );
         } catch (e) {
           await SupabaseConfig.client.auth.signOut();
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('فشل إكمال التسجيل. حاول مرة أخرى.')));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('فشل إكمال التسجيل. حاول مرة أخرى.')),
+            );
+          }
         }
       }
     } on AuthException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -90,7 +98,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 const SizedBox(height: 20),
                 Icon(Icons.person_add_alt_rounded, size: 64, color: AppTheme.emeraldGreen)
-                    .animate().scale(duration: 500.ms),
+                    .animate()
+                    .scale(duration: 500.ms),
                 const SizedBox(height: 12),
                 Text(
                   AppStrings.register,
@@ -103,7 +112,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     labelText: 'الاسم الكامل',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
                 ).animate().fadeIn(delay: 200.ms),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -133,19 +143,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ).animate().fadeIn(delay: 400.ms),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _role,
-                  decoration: const InputDecoration(
-                    labelText: 'الدور',
-                    prefixIcon: Icon(Icons.school_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'student', child: Text('طالب')),
-                    DropdownMenuItem(value: 'guardian', child: Text('ولي أمر')),
-                  ],
-                  onChanged: (v) => setState(() => _role = v!),
-                ).animate().fadeIn(delay: 500.ms),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -158,14 +155,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: _loading
-                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('إنشاء حساب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('إنشاء حساب',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   ),
                 ).animate().fadeIn(delay: 600.ms),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                  child: Text('لدي حساب بالفعل', style: TextStyle(color: AppTheme.warmGold)),
+                  child: Text('لدي حساب بالفعل',
+                      style: TextStyle(color: AppTheme.warmGold)),
                 ),
               ],
             ),

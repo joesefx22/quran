@@ -1,6 +1,6 @@
 class AppConstants {
-  static const String supabaseUrl = 'https://amxlmcxbncdnwexnwgdd.supabase.co';
-  static const String supabaseAnonKey = 'sb_publishable_aPPgdRGk4a1g_j_JFE6Zow_fGHeT-m4';
+  static const String supabaseUrl = 'https://qqnwfcofjksvqewqukzu.supabase.co';
+  static const String supabaseAnonKey = 'sb_publishable_T1SwqxxCGQLIT9p2sPW60w_yzbSSZa3';
 
   static const String tableMosques = 'mosques';
   static const String tableGroups = 'groups';

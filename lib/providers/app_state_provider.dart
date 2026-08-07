@@ -8,9 +8,7 @@ enum AppState {
   incompleteProfile,
   teacher,
   student,
-  guardian,
   manager,
-  error, // الحالة الجديدة لأخطاء الاتصال
 }
 
 final appStateProvider = Provider<AsyncValue<AppState>>((ref) {
@@ -24,7 +22,8 @@ final appStateProvider = Provider<AsyncValue<AppState>>((ref) {
     data: (LocalUser? user) {
       if (user == null) return const AsyncValue.data(AppState.unauthenticated);
 
-      if ((user.role == 'student' || user.role == 'guardian') && !user.profileCompleted) {
+      // المعلم والطالب محتاجين يكملوا بروفايل
+      if ((user.role == 'student' || user.role == 'teacher') && !user.profileCompleted) {
         return const AsyncValue.data(AppState.incompleteProfile);
       }
 
@@ -33,8 +32,6 @@ final appStateProvider = Provider<AsyncValue<AppState>>((ref) {
           return const AsyncValue.data(AppState.teacher);
         case 'student':
           return const AsyncValue.data(AppState.student);
-        case 'guardian':
-          return const AsyncValue.data(AppState.guardian);
         case 'manager':
           return const AsyncValue.data(AppState.manager);
         default:
@@ -42,6 +39,6 @@ final appStateProvider = Provider<AsyncValue<AppState>>((ref) {
       }
     },
     loading: () => const AsyncValue.loading(),
-    error: (e, _) => const AsyncValue.data(AppState.error), // في حالة خطأ، نُبلغ واجهة المستخدم
+    error: (e, _) => const AsyncValue.data(AppState.unauthenticated),
   );
 });

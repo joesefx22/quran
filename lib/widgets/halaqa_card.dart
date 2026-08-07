@@ -27,7 +27,7 @@ class HalaqaCard extends StatelessWidget {
     return Card(
       color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
       elevation: 1.5,
-      shadowColor: AppTheme.emeraldGreen.withOpacity(0.3),
+      shadowColor: AppTheme.emeraldGreen.withValues(alpha: 0.3), // ✅ تم التحديث
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -43,7 +43,7 @@ class HalaqaCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.emeraldGreen.withOpacity(0.15),
+                    color: AppTheme.emeraldGreen.withValues(alpha: 0.15), // ✅ تم التحديث
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: SvgPicture.asset(
@@ -63,7 +63,7 @@ class HalaqaCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.headline(context).copyWith(
+                      style: AppTypography.headline().copyWith( // ✅ تم حذف (context)
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
@@ -71,7 +71,7 @@ class HalaqaCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       subtitle,
-                      style: AppTypography.body(context).copyWith(
+                      style: AppTypography.body().copyWith( // ✅ تم حذف (context)
                         color: AppTheme.warmGold,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -83,7 +83,9 @@ class HalaqaCard extends StatelessWidget {
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 18,
-                color: isDark ? Colors.grey[500] : AppTheme.darkSlate.withOpacity(0.5),
+                color: isDark
+                    ? Colors.grey[500]
+                    : AppTheme.darkSlate.withValues(alpha: 0.5), // ✅ تم التحديث
               ),
             ],
           ),
@@ -96,7 +98,7 @@ class HalaqaCard extends StatelessWidget {
         .shimmer(
           delay: (300 + 40 * index).ms,
           duration: 900.ms,
-          color: AppTheme.warmGold.withOpacity(0.15),
+          color: AppTheme.warmGold.withValues(alpha: 0.15), // ✅ تم التحديث
         );
   }
 }

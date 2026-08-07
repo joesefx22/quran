@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart'; // ← تمت الإضافة
 import '../core/typography.dart';
 
 class QuranTextStyle {
@@ -13,11 +14,11 @@ class QuranTextStyle {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(
-          color: AppTheme.warmGold.withOpacity(0.4),
+          color: AppTheme.warmGold.withValues(alpha: 0.4), // ✅ تم التحديث
           width: 1,
         ),
         borderRadius: BorderRadius.circular(8),
-        color: AppTheme.warmGold.withOpacity(0.05),
+        color: AppTheme.warmGold.withValues(alpha: 0.05), // ✅ تم التحديث
       ),
       child: Text(
         text,

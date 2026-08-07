@@ -3,13 +3,13 @@ double evaluationFactor(String? evaluation) {
     case 'ممتاز':
       return 1.0;
     case 'جيد جداً':
-      return 0.9;
+      return 1.0;
     case 'جيد':
-      return 0.8;
+      return 1.0;
     case 'مقبول':
-      return 0.7;
+      return 1.0;
     case 'ضعيف':
-      return 0.3;
+      return 1.0;
     default:
       return 1.0;
   }

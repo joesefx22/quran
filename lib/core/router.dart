@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
@@ -9,7 +8,6 @@ import '../screens/teacher/day_session_list.dart';
 import '../screens/teacher/session_form.dart';
 import '../screens/student/student_dashboard.dart';
 import '../screens/student/leaderboard.dart';
-import '../screens/guardian/guardian_dashboard.dart';
 import '../screens/manager/manager_dashboard.dart';
 import '../screens/manager/student_list_screen.dart';
 import '../screens/manager/student_details_screen.dart';
@@ -25,7 +23,6 @@ class AppRouter {
   static const String sessionForm = '/session-form';
   static const String studentDashboard = '/student-dashboard';
   static const String leaderboard = '/leaderboard';
-  static const String guardianDashboard = '/guardian-dashboard';
   static const String managerDashboard = '/manager-dashboard';
   static const String studentList = '/student-list';
   static const String studentDetails = '/student-details';
@@ -72,8 +69,6 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const StudentDashboard());
       case leaderboard:
         return MaterialPageRoute(builder: (_) => const LeaderboardScreen());
-      case guardianDashboard:
-        return MaterialPageRoute(builder: (_) => const GuardianDashboard());
       case managerDashboard:
         return MaterialPageRoute(builder: (_) => const ManagerDashboard());
       case studentList:

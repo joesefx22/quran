@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter/services.dart';
 import '../core/router.dart';
 import '../core/theme.dart';
-import '../models/local_user.dart';
 import '../providers/app_state_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/quran_database_service.dart';
@@ -66,14 +64,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         case AppState.student:
           Navigator.pushReplacementNamed(context, AppRouter.studentDashboard);
           break;
-        case AppState.guardian:
-          Navigator.pushReplacementNamed(context, AppRouter.guardianDashboard);
-          break;
         case AppState.manager:
           Navigator.pushReplacementNamed(context, AppRouter.managerDashboard);
-          break;
-        case AppState.error:
-          // لا نقوم بأي توجيه، نترك المستخدم يرى رسالة الخطأ
           break;
         case AppState.loading:
           _navigated = false;
@@ -85,43 +77,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final currentState = ref.watch(appStateProvider);
-    debugPrint('👀 حالة التطبيق الآن من watch: $currentState');
 
-    ref.listen<AsyncValue<AppState>>(
-      appStateProvider,
-      (prev, next) {
-        next.when(
-          data: (state) {
-            debugPrint('✅ الحالة وصلت من listen: $state');
-            if (state != AppState.loading && state != AppState.error) {
-              _navigate(state);
-            }
-          },
-          error: (error, stackTrace) {
-            debugPrint('🔴 خطأ في Provider من listen: $error');
-            // لا نوجه إلى login بل نعتمد على حالة error المعروضة
-          },
-          loading: () {},
-        );
-      },
-    );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      currentState.when(
-        data: (state) {
-          if (state != AppState.loading && state != AppState.error) {
-            _navigate(state);
-          }
-        },
-        error: (error, stackTrace) {
-          debugPrint('🔴 خطأ ممسوك من الـ watch: $error');
-        },
-        loading: () {},
-      );
+    ref.listen<AsyncValue<AppState>>(appStateProvider, (prev, next) {
+      next.whenData((state) {
+        if (state != AppState.loading) {
+          _navigate(state);
+        }
+      });
     });
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isError = currentState is AsyncData && currentState.value == AppState.error;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF000000) : AppTheme.ivory,
@@ -147,48 +112,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ),
             ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
             const SizedBox(height: 30),
-            if (isError) ...[
-              // شاشة الخطأ مع زر إعادة المحاولة
-              Text(
-                'تعذر الاتصال بالخادم',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppTheme.darkSlate,
-                    ),
+            Text(
+              'حلقة القرآن',
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppTheme.darkSlate,
+                  ),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
+            const SizedBox(height: 40),
+            const SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warmGold),
               ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // إعادة تحميل بيانات المستخدم
-                  ref.invalidate(currentUserProvider);
-                  setState(() => _navigated = false);
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('إعادة المحاولة'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ] else ...[
-              // شاشة التحميل العادية
-              Text(
-                'حلقة القرآن',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppTheme.darkSlate,
-                    ),
-              ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
-              const SizedBox(height: 40),
-              const SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warmGold),
-                ),
-              ),
-            ],
+            ),
           ],
         ),
       ),
